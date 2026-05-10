@@ -1,0 +1,144 @@
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+package guestbook.v1;
+
+option go_package = "github.com/novaherdi/go-proto/gen/guestbook/v1;guestbookv1";
+
+// Swagger metadata
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "Guestbook API";
+    version: "1.0";
+    description: "A simple guestbook API built with gRPC and grpc-gateway. Includes JWT authentication for protected endpoints.";
+    contact: {
+      name: "Guestbook API Support";
+      email: "support@example.com";
+    };
+  };
+  schemes: HTTP;
+  schemes: HTTPS;
+  consumes: "application/json";
+  produces: "application/json";
+  security_definitions: {
+    security: {
+      key: "Bearer";
+      value: {
+        type: TYPE_API_KEY;
+        in: IN_HEADER;
+        name: "Authorization";
+        description: "Enter your bearer token in the format: Bearer <token>";
+      }
+    }
+  };
+};
+
+service GuestbookService {
+  // Add a new entry to the guestbook (requires authentication)
+  rpc AddEntry(AddEntryRequest) returns (AddEntryResponse) {
+    option (google.api.http) = {
+      post: "/v1/guestbook"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Add guestbook entry";
+      description: "Creates a new entry in the guestbook with name, email, and message. Requires JWT authentication.";
+      tags: "Guestbook";
+      security: {
+        security_requirement: {
+          key: "Bearer";
+          value: {};
+        }
+      };
+    };
+  }
+  
+  // List all guestbook entries
+  rpc ListEntries(ListEntriesRequest) returns (ListEntriesResponse) {
+    option (google.api.http) = {
+      get: "/v1/guestbook"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "List guestbook entries";
+      description: "Retrieves all entries from the guestbook";
+      tags: "Guestbook";
+    };
+  }
+}
+
+service AuthService {
+  // Register a new user
+  rpc Register(RegisterRequest) returns (AuthResponse) {
+    option (google.api.http) = {
+      post: "/auth/register"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Register new user";
+      description: "Create a new user account and receive a JWT token";
+      tags: "Authentication";
+    };
+  }
+
+  // Login with username and password
+  rpc Login(LoginRequest) returns (AuthResponse) {
+    option (google.api.http) = {
+      post: "/auth/login"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Login user";
+      description: "Authenticate user and receive a JWT token";
+      tags: "Authentication";
+    };
+  }
+}
+
+message AddEntryRequest {
+  string name = 1;     // Name of the person signing the guestbook
+  string email = 2;    // Email address of the person
+  string message = 3;  // Message to be added to the guestbook
+}
+
+message AddEntryResponse {
+  bool success = 1;    // Indicates whether the entry was successfully added
+  string error = 2;    // Error message if success is false
+}
+
+message ListEntriesRequest {
+  int32 limit = 1;     // Maximum number of entries to return (default: 10, max: 100)
+  int32 offset = 2;    // Number of entries to skip for pagination (default: 0)
+}
+
+message ListEntriesResponse {
+  repeated GuestbookEntry data = 1;  // List of all guestbook entries
+}
+
+message GuestbookEntry {
+  string name = 1;       // Name of the person who signed
+  string email = 2;      // Email address of the person
+  string message = 3;    // The message they left
+  string created_at = 4;  // Formatted date/time of when the entry was created (RFC3339 format)
+}
+
+// Authentication Messages
+message RegisterRequest {
+  string username = 1;  // Unique username (required)
+  string email = 2;     // Email address (required)
+  string password = 3;  // Password, minimum 6 characters (required)
+}
+
+message LoginRequest {
+  string username = 1;  // Username (required)
+  string password = 2;  // Password (required)
+}
+
+message AuthResponse {
+  string token = 1;     // JWT authentication token
+  uint32 user_id = 2;   // User ID
+  string username = 3;  // Username
+  string email = 4;     // Email address
+  string error = 5;     // Error message if authentication failed
+}

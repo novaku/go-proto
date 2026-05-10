@@ -1,0 +1,338 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Guestbook API",
+    "description": "A simple guestbook API built with gRPC and grpc-gateway. Includes JWT authentication for protected endpoints.",
+    "version": "1.0",
+    "contact": {
+      "name": "Guestbook API Support",
+      "email": "support@example.com"
+    }
+  },
+  "tags": [
+    {
+      "name": "GuestbookService"
+    },
+    {
+      "name": "AuthService"
+    }
+  ],
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Login user",
+        "description": "Authenticate user and receive a JWT token",
+        "operationId": "AuthService_Login",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AuthResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LoginRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "Register new user",
+        "description": "Create a new user account and receive a JWT token",
+        "operationId": "AuthService_Register",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AuthResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RegisterRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/v1/guestbook": {
+      "get": {
+        "summary": "List guestbook entries",
+        "description": "Retrieves all entries from the guestbook",
+        "operationId": "GuestbookService_ListEntries",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListEntriesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "description": "Maximum number of entries to return (default: 10, max: 100)",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "Number of entries to skip for pagination (default: 0)",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Guestbook"
+        ]
+      },
+      "post": {
+        "summary": "Add guestbook entry",
+        "description": "Creates a new entry in the guestbook with name, email, and message. Requires JWT authentication.",
+        "operationId": "GuestbookService_AddEntry",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AddEntryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1AddEntryRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Guestbook"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AddEntryRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Name of the person signing the guestbook"
+        },
+        "email": {
+          "type": "string",
+          "title": "Email address of the person"
+        },
+        "message": {
+          "type": "string",
+          "title": "Message to be added to the guestbook"
+        }
+      }
+    },
+    "v1AddEntryResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "title": "Indicates whether the entry was successfully added"
+        },
+        "error": {
+          "type": "string",
+          "title": "Error message if success is false"
+        }
+      }
+    },
+    "v1AuthResponse": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "title": "JWT authentication token"
+        },
+        "userId": {
+          "type": "integer",
+          "format": "int64",
+          "title": "User ID"
+        },
+        "username": {
+          "type": "string",
+          "title": "Username"
+        },
+        "email": {
+          "type": "string",
+          "title": "Email address"
+        },
+        "error": {
+          "type": "string",
+          "title": "Error message if authentication failed"
+        }
+      }
+    },
+    "v1GuestbookEntry": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Name of the person who signed"
+        },
+        "email": {
+          "type": "string",
+          "title": "Email address of the person"
+        },
+        "message": {
+          "type": "string",
+          "title": "The message they left"
+        },
+        "createdAt": {
+          "type": "string",
+          "title": "Formatted date/time of when the entry was created (RFC3339 format)"
+        }
+      }
+    },
+    "v1ListEntriesResponse": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1GuestbookEntry"
+          },
+          "title": "List of all guestbook entries"
+        }
+      }
+    },
+    "v1LoginRequest": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "title": "Username (required)"
+        },
+        "password": {
+          "type": "string",
+          "title": "Password (required)"
+        }
+      }
+    },
+    "v1RegisterRequest": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "title": "Unique username (required)"
+        },
+        "email": {
+          "type": "string",
+          "title": "Email address (required)"
+        },
+        "password": {
+          "type": "string",
+          "title": "Password, minimum 6 characters (required)"
+        }
+      },
+      "title": "Authentication Messages"
+    }
+  },
+  "securityDefinitions": {
+    "Bearer": {
+      "type": "apiKey",
+      "description": "Enter your bearer token in the format: Bearer \u003ctoken\u003e",
+      "name": "Authorization",
+      "in": "header"
+    }
+  }
+}

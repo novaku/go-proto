@@ -1,0 +1,27 @@
+{
+    "environment": "production",
+    "server": {
+        "port": 50051,
+        "httpPort": 8080,
+        "name": "guestbook-service-prod"
+    },
+    "database": {
+        "host": "localhost",
+        "port": 3306,
+        "user": "root",
+        "password": "root",
+        "dbname": "guestbook"
+    },
+    "redis": {
+        "host": "localhost",
+        "port": 6379,
+        "password": "",
+        "db": 0,
+        "enabled": true
+    },
+    "jwt": {
+        "secret_key": "${JWT_SECRET_KEY}",
+        "token_duration": 24,
+        "issuer": "guestbook-service"
+    }
+}
