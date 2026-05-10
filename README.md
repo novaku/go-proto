@@ -5,7 +5,7 @@ A Go service that exposes a **Guestbook** API over gRPC and HTTP (grpc-gateway),
 ## Project structure
 
 | Path | Purpose |
-|------|---------|
+| ---- | ------- |
 | `cmd/server` | Application entrypoint: config, DB, DI wiring, gRPC + HTTP servers |
 | `proto` | `.proto` sources and OpenAPI/grpc-gateway options |
 | `gen` | Generated Go, gRPC, gateway, and Swagger JSON (created by `make generate`) |
@@ -39,7 +39,22 @@ Layers follow **SOLID**-friendly boundaries: dependencies point inward (handlers
 
 - Default config file: `pkg/config/config.local.json`
 - Production: set `APP_ENV=production` to load `pkg/config/config.prod.json`
+- Environment variables with `APP_` prefix override file values (Viper), for example:
+
+```bash
+APP_SERVER_PORT=60000 APP_SERVER_HTTPPORT=9090 go run cmd/server/main.go
+APP_DATABASE_HOST=127.0.0.1 APP_DATABASE_PASSWORD=secret go run cmd/server/main.go
+APP_JWT_SECRETKEY=my-prod-secret APP_JWT_TOKENDURATION=12 go run cmd/server/main.go
+```
+
 - Adjust `server.port` (gRPC), `server.httpPort` (HTTP gateway + Swagger), `database`, `redis`, and `jwt` to match your environment.
+
+### Runtime behavior at startup
+
+- Loads config from `config.local.json` or `config.prod.json` depending on `APP_ENV`
+- Connects to MySQL using GORM and runs `AutoMigrate` for `GuestbookEntry` and `User`
+- Tries to connect Redis only when `redis.enabled=true`; if Redis is unreachable, app still runs with cache disabled
+- Applies JWT interceptor only to `GuestbookService/AddEntry` (list is public)
 
 ## Code generation
 
@@ -76,6 +91,15 @@ make build
 - **gRPC**: listens on the port in config (default `50051`)
 - **HTTP**: gateway and auth routes on `httpPort` (default `8080`)
 
+## Make targets
+
+- `make generate`: install protoc plugins, fetch proto deps, generate gRPC/gateway/OpenAPI code into `gen/`
+- `make build`: build binary to `bin/server`
+- `make run`: run server via `go run cmd/server/main.go`
+- `make test`: run `go test ./...`
+- `make swagger`: copy generated spec to `swagger/` and serve static UI on port `8081`
+- `make clean`: remove `gen/`, `bin/`, and `swagger/`
+
 ## Testing
 
 Run the full module test suite:
@@ -97,14 +121,46 @@ go test ./test/...
 
 Defined in `proto/guestbook/v1/guestbook.proto`:
 
-**GuestbookService (gRPC + HTTP via gateway)**
+### GuestbookService (gRPC + HTTP via gateway)
 
-- **`AddEntry`** — create an entry (JWT required; see interceptor in `cmd/server/main.go`)
-- **`ListEntries`** — paginated list of entries (optional Redis cache)
+- **`AddEntry`** — create an entry (JWT required; protected method)
+- **`ListEntries`** — paginated list (query params: `limit`, `offset`; defaults `10/0`, max `limit=100`), optional Redis cache
 
-**Authentication**
+### Authentication
 
 - Proto also defines **`AuthService`** (`Login`, `Register`) for documentation alignment with OpenAPI.
 - The running server serves **`POST /auth/login`** and **`POST /auth/register`** as JSON via `internal/controller` and `internal/dto`, backed by `internal/service` and MySQL users.
+
+### HTTP endpoint summary
+
+- `POST /auth/register` (public, JSON body: `username`, `email`, `password`)
+- `POST /auth/login` (public, JSON body: `username`, `password`)
+- `GET /v1/guestbook` (public, supports `limit` and `offset`)
+- `POST /v1/guestbook` (requires `Authorization: Bearer <token>`)
+
+### Example flow (HTTP)
+
+Register:
+
+```bash
+curl -X POST http://localhost:8080/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","email":"alice@example.com","password":"secret123"}'
+```
+
+List entries:
+
+```bash
+curl 'http://localhost:8080/v1/guestbook?limit=10&offset=0'
+```
+
+Add entry (replace `<token>`):
+
+```bash
+curl -X POST http://localhost:8080/v1/guestbook \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <token>' \
+  -d '{"name":"Alice","email":"alice@example.com","message":"Hello from HTTP"}'
+```
 
 Obtain a JWT from login or register, then call protected HTTP/gateway methods with header: `Authorization: Bearer <token>`.
